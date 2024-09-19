@@ -1,5 +1,6 @@
 plugins {
-    id 'java'
+    id 'java-library'
+    id 'maven-publish'
 }
 
 group = 'org.geozelot.utils.sql'
@@ -7,6 +8,10 @@ version = '1.0.0'
 
 repositories {
     mavenCentral()
+}
+
+java {
+    withJavadocJar()
 }
 
 dependencies {
