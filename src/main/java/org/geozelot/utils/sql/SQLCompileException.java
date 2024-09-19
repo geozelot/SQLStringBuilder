@@ -1,4 +1,4 @@
-package org.geozelot;
+package org.geozelot.utils.sql;
 
 public class SQLCompileException extends Exception {
     public SQLCompileException () {
