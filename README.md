@@ -1,2 +1,2 @@
 # SQLStringBuilder
-Simplistic inline parameterized SQL string builder and compiler
+Simplistic inline SQL string factory with dynamic parameter injection.
