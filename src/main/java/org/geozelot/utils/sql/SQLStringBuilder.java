@@ -352,6 +352,7 @@ public class SQLStringBuilder {
 
 
 // MAIN API: PRIMARY STATEMENT INITIALIZERS
+    
     public SQLStringBuilder WITH() {
         return this.blockPut(QUERY_BLOCK.WITH, " , ");
     }
