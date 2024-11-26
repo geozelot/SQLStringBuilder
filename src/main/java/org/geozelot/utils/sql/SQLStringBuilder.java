@@ -3,7 +3,7 @@ package org.geozelot.utils.sql;
 import java.util.*;
 
 public class SQLStringBuilder {
-    private final Map<QUERY_BLOCK, StringJoiner> queryBlocks = new HashMap<QUERY_BLOCK, StringJoiner>();
+    private final Map<QUERY_BLOCK, StringJoiner> queryBlocks = new HashMap<>();
     private QUERY_BLOCK currentBlock;
     private int parameterCount = 0;
     private int currentParameterOrdinal = 0;
@@ -303,9 +303,6 @@ public class SQLStringBuilder {
         return this.blockAdd(block, control.toString());
     }
 
-
-
-// PUBLIC HELPER METHODS
 
     /**
      * Add multiple literals to specified SQL block
