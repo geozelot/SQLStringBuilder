@@ -377,7 +377,7 @@ public class SQLStringBuilder {
         if (this.rawStatement.isBlank()) this.build();
 
         this.compiledStatement = this.rawStatement;
-        if (!this.parameterInjections.isEmpty()) {
+        if (this.parameterInjections != null && !parameterInjections.isEmpty()) {
             String[] compiledBuilder = this.rawStatement.split(" ");
 
             int currentParameterPostion = -1;
@@ -751,12 +751,12 @@ public class SQLStringBuilder {
     /**
      * Add a procedure call with arguments to the query string
      */
-    public SQLStringBuilder VoidProcedure(String procedure, String... arguments) {
+    public SQLStringBuilder VoidProcedure(String procedure, Object... arguments) {
         StringJoiner procedureCall = new StringJoiner("").add(procedure);
 
         StringJoiner argumentList = new StringJoiner(" , ", "( ", " )");
-        for (String argument : arguments) {
-            argumentList.add(argument);
+        for (Object argument : arguments) {
+            argumentList.add(argument.toString());
         }
 
         return this.blockAdd(procedureCall.add(argumentList.toString()).toString());
@@ -765,12 +765,12 @@ public class SQLStringBuilder {
     /**
      * Add a scalar function with arguments and alias to the query string
      */
-    public SQLStringBuilder ScalarFunction(String function, String alias, String... arguments) {
+    public SQLStringBuilder ScalarFunction(String function, String alias, Object... arguments) {
         StringJoiner functionCall = new StringJoiner("").add(function);
 
         StringJoiner argumentList = new StringJoiner(" , ", "( ", " )");
-        for (String argument : arguments) {
-            argumentList.add(argument);
+        for (Object argument : arguments) {
+            argumentList.add(argument.toString());
         }
 
         return this.blockAdd(addAliasSuffix(functionCall.add(argumentList.toString()).toString(), alias));
