@@ -1,14 +1,27 @@
-package org.geozelot.utils.sql;
+package com.streetmetrics.util.sql;
+
+import org.geozelot.utils.sql.SQLCompileException;
 
 import java.util.*;
 
 public class SQLStringBuilder {
+    private final Map<QUERY_BLOCK, StringJoiner> queryBlocks = new HashMap<QUERY_BLOCK, StringJoiner>();
+    private QUERY_BLOCK currentBlock;
+    private int parameterCount = 0;
+    private int currentParameterOrdinal = 0;
+    private ArrayList<String> parameterInjections;
+    private Map<String, ArrayList<Integer>> parameterReferences;
+    private String rawStatement = "";
+    private String compiledStatement = "";
+    private Boolean needsCompile = true;
+
     /**
-     * ENUM for query part control flow;
+     * ENUMs for query part control flow;
      * As we're using the actual ENUM values to generate the
      * respective query statement keywords, we have to override
      * stringification of two-word keywords
      */
+
     private enum QUERY_BLOCK {
         WITH,
         SELECT,
@@ -18,6 +31,7 @@ public class SQLStringBuilder {
                 return "SELECT DISTINCT";
             }
         },
+        CALL,
         FROM,
         WHERE,
         GROUP_BY {
@@ -37,18 +51,92 @@ public class SQLStringBuilder {
         LIMIT
     }
 
-    private final Map<QUERY_BLOCK, StringJoiner> queryBlocks = new HashMap<QUERY_BLOCK, StringJoiner>();
-    private QUERY_BLOCK currentBlock;
-
-    private int parameterCount = 0;
-    private int currentParameterOrdinal = 0;
-    private ArrayList<String> parameterInjections;
-    private Map<String, ArrayList<Integer>> parameterReferences;
-
-    private String rawStatement = "";
-    private String compiledStatement = "";
-
-    private Boolean needsCompile = true;
+    private enum QUERY_STATEMENT {
+        JOIN,
+        INNER_JOIN {
+            @Override
+            public String toString() {
+                return "INNER JOIN";
+            }
+        },
+        OUTER_JOIN {
+            @Override
+            public String toString() {
+                return "OUTER JOIN";
+            }
+        },
+        LEFT_JOIN {
+            @Override
+            public String toString() {
+                return "LEFT JOIN";
+            }
+        },
+        RIGHT_JOIN {
+            @Override
+            public String toString() {
+                return "RIGHT JOIN";
+            }
+        },
+        CROSS_JOIN {
+            @Override
+            public String toString() {
+                return "RIGHT JOIN";
+            }
+        },
+        ON,
+        USING,
+        AND,
+        OR,
+        BETWEEN,
+        EXISTS,
+        NOT,
+        IN,
+        LIKE,
+        GREATER_THAN{
+            @Override
+            public String toString() {
+                return ">";
+            }
+        },
+        LESS_THAN{
+            @Override
+            public String toString() {
+                return "<";
+            }
+        },
+        GREATER_THAN_OR_EQUAL {
+            @Override
+            public String toString() {
+                return ">=";
+            }
+        },
+        LESS_THAN_OR_EQUAL {
+            @Override
+            public String toString() {
+                return "<=";
+            }
+        },
+        EQUAL{
+            @Override
+            public String toString() {
+                return "=";
+            }
+        },
+        IS_NULL{
+            @Override
+            public String toString() {
+                return "IS NULL";
+            }
+        },
+        IS_NOT_NULL{
+            @Override
+            public String toString() {
+                return "IS NOT NULL";
+            }
+        },
+        ASC,
+        DESC
+    }
 
 
 // CONSTRUCTORS
@@ -176,6 +264,42 @@ public class SQLStringBuilder {
     }
 
     /**
+     * Helper method to create a valid (double-quoted) SQL identifier and optional qualifiers;
+     * qualifiers are prepended to the identifier in order given;
+     * uses Object.toString() method
+     */
+    public static String Identifier(Object identifier, Object... qualifiers) {
+        StringJoiner qualifiedIdentifier = new StringJoiner(".");
+        for (Object qualifier : qualifiers) {
+            qualifiedIdentifier.add(wrapDoubleQuote(escapeChars(qualifier.toString())));
+        }
+
+        return qualifiedIdentifier.add(wrapDoubleQuote(escapeChars(identifier.toString()))).toString();
+    }
+
+    /**
+     * Helper method to create a valid (single-quoted) SQL varchar (TEXT) value from a given Object;
+     * uses Object.toString() method.
+     */
+    public static String Varchar(Object identifier) {
+        return addCast(wrapSingleQuote(escapeChars(identifier.toString())), "TEXT");
+    }
+
+    /**
+     * Wrap a given value into an explicit CAST to a given type
+     */
+    public static String Cast(Object value, String type) {
+        return addCast(value.toString(), type);
+    }
+
+    /**
+     * Create a SQL block wrapped in parentheses
+     */
+    public static String Block(Object block) {
+        return wrapParens(block.toString());
+    }
+
+    /**
      * Initiate a new SQL block literal joiner and set to current block
      */
     private SQLStringBuilder blockPut(QUERY_BLOCK block, String delimiter) {
@@ -198,6 +322,10 @@ public class SQLStringBuilder {
         return this;
     }
 
+    private SQLStringBuilder blockAdd(QUERY_STATEMENT statement) {
+        return this.blockAdd(statement.toString());
+    }
+
     /**
      * Add multiple literals to current SQL block
      */
@@ -208,6 +336,14 @@ public class SQLStringBuilder {
 
         return this;
     }
+
+    private SQLStringBuilder blockAdd(QUERY_BLOCK block, QUERY_STATEMENT control) {
+        return this.blockAdd(block, control.toString());
+    }
+
+
+
+// PUBLIC HELPER METHODS
 
     /**
      * Add multiple literals to specified SQL block
@@ -311,47 +447,8 @@ public class SQLStringBuilder {
 
 
 
-// PUBLIC HELPER METHODS
+// MAIN API: PRIMARY STATEMENT INITIALIZERS
 
-    /**
-     * Helper method to create a valid (double-quoted) SQL identifier and optional qualifiers;
-     * qualifiers are prepended to the identifier in order given;
-     * uses Object.toString() method
-     */
-    public static String Identifier(Object identifier, Object... qualifiers) {
-        StringJoiner qualifiedIdentifier = new StringJoiner(".");
-        for (Object qualifier : qualifiers) {
-            qualifiedIdentifier.add(wrapDoubleQuote(escapeChars(qualifier.toString())));
-        }
-
-        return qualifiedIdentifier.add(wrapDoubleQuote(escapeChars(identifier.toString()))).toString();
-    }
-
-    /**
-     * Helper method to create a valid (single-quoted) SQL varchar (TEXT) value from a given Object;
-     * uses Object.toString() method.
-     */
-    public static String Varchar(Object identifier) {
-        return addCast(wrapSingleQuote(escapeChars(identifier.toString())), "TEXT");
-    }
-
-    /**
-     * Wrap a given value into an explicit CAST to a given type
-     */
-    public static String Cast(Object value, String type) {
-        return addCast(value.toString(), type);
-    }
-
-    /**
-     * Create a SQL block wrapped in parentheses
-     */
-    public static String Block(Object block) {
-        return wrapParens(block.toString());
-    }
-
-
-
-    // MAIN API: PRIMARY STATEMENT INITIALIZERS
     public SQLStringBuilder WITH() {
         return this.blockPut(QUERY_BLOCK.WITH, " , ");
     }
@@ -368,20 +465,32 @@ public class SQLStringBuilder {
         return this.blockPut(QUERY_BLOCK.SELECT_DISTINCT, " , ");
     }
 
+    public SQLStringBuilder CALL() {
+        return this.blockPut(QUERY_BLOCK.CALL, " ");
+    }
+
     public SQLStringBuilder FROM() {
         return this.blockPut(QUERY_BLOCK.FROM, " ");
     }
 
     public SQLStringBuilder INNER_JOIN() {
-        return this.blockAdd(QUERY_BLOCK.FROM, "INNER JOIN");
+        return this.blockAdd(QUERY_BLOCK.FROM, QUERY_STATEMENT.INNER_JOIN);
+    }
+
+    public SQLStringBuilder OUTER_JOIN() {
+        return this.blockAdd(QUERY_BLOCK.FROM, QUERY_STATEMENT.OUTER_JOIN);
     }
 
     public SQLStringBuilder LEFT_JOIN() {
-        return this.blockAdd(QUERY_BLOCK.FROM, "LEFT JOIN");
+        return this.blockAdd(QUERY_BLOCK.FROM, QUERY_STATEMENT.LEFT_JOIN);
+    }
+
+    public SQLStringBuilder RIGHT_JOIN() {
+        return this.blockAdd(QUERY_BLOCK.FROM, QUERY_STATEMENT.RIGHT_JOIN);
     }
 
     public SQLStringBuilder CROSS_JOIN() {
-        return this.blockAdd(QUERY_BLOCK.FROM, "CROSS JOIN");
+        return this.blockAdd(QUERY_BLOCK.FROM, QUERY_STATEMENT.CROSS_JOIN);
     }
 
     public SQLStringBuilder WHERE() {
@@ -401,11 +510,11 @@ public class SQLStringBuilder {
 // MAIN API: SECONDARY STATEMENT SUPPORT INITIALIZERS
 
     public SQLStringBuilder ON() {
-        return this.blockAdd(QUERY_BLOCK.FROM, "ON");
+        return this.blockAdd(QUERY_BLOCK.FROM, QUERY_STATEMENT.ON);
     }
 
     public SQLStringBuilder USING(String... columns) {
-        this.blockAdd(QUERY_BLOCK.FROM, "USING", "(");
+        this.blockAdd(QUERY_BLOCK.FROM, QUERY_STATEMENT.USING.toString(), "(");
         for (int i = 0; i < columns.length; i++) {
             this.blockAdd(QUERY_BLOCK.FROM, columns[i]);
             if (i <  columns.length - 1) this.blockAdd(",");
@@ -423,31 +532,31 @@ public class SQLStringBuilder {
 // MAIN API: LOGICAL/SET OPERATORS
 
     public SQLStringBuilder NOT() {
-        return this.blockAdd("NOT");
+        return this.blockAdd(QUERY_STATEMENT.NOT);
     }
 
     public SQLStringBuilder AND() {
-        return this.blockAdd("AND");
+        return this.blockAdd(QUERY_STATEMENT.AND);
     }
 
     public SQLStringBuilder OR() {
-        return this.blockAdd("OR");
+        return this.blockAdd(QUERY_STATEMENT.OR);
     }
 
     public SQLStringBuilder BETWEEN() {
-        return this.blockAdd("BETWEEN");
+        return this.blockAdd(QUERY_STATEMENT.BETWEEN);
     }
 
     public SQLStringBuilder EXISTS(SQLStringBuilder subQuery) {
-        return this.blockAdd("EXISTS").SubQuery(subQuery, "");
+        return this.blockAdd(QUERY_STATEMENT.EXISTS).SubQuery(subQuery, "");
     }
 
     public SQLStringBuilder IN(SQLStringBuilder subQuery) {
-        return this.blockAdd("IN").SubQuery(subQuery, "");
+        return this.blockAdd(QUERY_STATEMENT.IN).SubQuery(subQuery, "");
     }
 
     public SQLStringBuilder IN(Integer parameterCount) {
-        this.blockAdd("IN", "(");
+        this.blockAdd(QUERY_STATEMENT.IN.toString(), "(");
         for (int i = 0; i < parameterCount; i++) {
             this.QueryParam();
             if (i < parameterCount - 1) this.blockAdd(",");
@@ -457,7 +566,7 @@ public class SQLStringBuilder {
     }
 
     public SQLStringBuilder IN(Object... parameterNames) {
-        this.blockAdd("IN", "(");
+        this.blockAdd(QUERY_STATEMENT.IN.toString(), "(");
         for (int i = 0; i < parameterNames.length; i++) {
             this.QueryParam(parameterNames[i]);
             if (i < parameterNames.length - 1) this.blockAdd(",");
@@ -466,30 +575,30 @@ public class SQLStringBuilder {
     }
 
     public SQLStringBuilder LIKE() {
-        return this.blockAdd("LIKE");
+        return this.blockAdd(QUERY_STATEMENT.LIKE);
     }
 
 
 // MAIN API: MATHEMATICAL OPERATORS
 
     public SQLStringBuilder Equals() {
-        return this.blockAdd("=");
+        return this.blockAdd(QUERY_STATEMENT.EQUAL);
     }
 
     public SQLStringBuilder GreaterThan() {
-        return this.blockAdd(">");
+        return this.blockAdd(QUERY_STATEMENT.GREATER_THAN);
     }
 
     public SQLStringBuilder GreaterThanOrEquals() {
-        return this.blockAdd(">=");
+        return this.blockAdd(QUERY_STATEMENT.GREATER_THAN_OR_EQUAL);
     }
 
     public SQLStringBuilder LessThan() {
-        return this.blockAdd("<");
+        return this.blockAdd(QUERY_STATEMENT.LESS_THAN);
     }
 
     public SQLStringBuilder LessThanOrEquals() {
-        return this.blockAdd("<=");
+        return this.blockAdd(QUERY_STATEMENT.LESS_THAN_OR_EQUAL);
     }
 
 
@@ -497,22 +606,22 @@ public class SQLStringBuilder {
 // MAIN API: NULL COMPARISON
 
     public SQLStringBuilder IS_NULL() {
-        return this.blockAdd("IS NULL");
+        return this.blockAdd(QUERY_STATEMENT.IS_NULL);
     }
 
     public SQLStringBuilder IS_NOT_NULL() {
-        return this.blockAdd("IS NOT NULL");
+        return this.blockAdd(QUERY_STATEMENT.IS_NOT_NULL);
     }
 
 
 // MAIN API: ORDER OPERATORS
 
     public SQLStringBuilder ASC() {
-        return this.blockAdd(QUERY_BLOCK.ORDER_BY, "ASC");
+        return this.blockAdd(QUERY_BLOCK.ORDER_BY, QUERY_STATEMENT.ASC);
     }
 
     public SQLStringBuilder DESC() {
-        return this.blockAdd(QUERY_BLOCK.ORDER_BY, "DESC");
+        return this.blockAdd(QUERY_BLOCK.ORDER_BY, QUERY_STATEMENT.DESC);
     }
 
     public SQLStringBuilder OFFSET(Integer offset) {
@@ -641,6 +750,20 @@ public class SQLStringBuilder {
 // MAIN API: FUNCTION CALL INJECTION
 
     /**
+     * Add a procedure call with arguments to the query string
+     */
+    public SQLStringBuilder VoidProcedure(String procedure, String... arguments) {
+        StringJoiner procedureCall = new StringJoiner("").add(procedure);
+
+        StringJoiner argumentList = new StringJoiner(" , ", "( ", " )");
+        for (String argument : arguments) {
+            argumentList.add(argument);
+        }
+
+        return this.blockAdd(procedureCall.add(argumentList.toString()).toString());
+    }
+
+    /**
      * Add a scalar function with arguments and alias to the query string
      */
     public SQLStringBuilder ScalarFunction(String function, String alias, String... arguments) {
@@ -655,7 +778,7 @@ public class SQLStringBuilder {
     }
 
     /**
-     * Add a scalar function with arguments and alias to the query string and wrao in a CAST
+     * Add a scalar function with arguments and alias to the query string and wrapped in a CAST
      */
     public SQLStringBuilder ScalarFunctionCast(String function, String alias, String type, String... arguments) {
         StringJoiner functionCall = new StringJoiner("").add(function);
