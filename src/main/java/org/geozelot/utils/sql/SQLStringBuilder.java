@@ -1,6 +1,4 @@
-package com.streetmetrics.util.sql;
-
-import org.geozelot.utils.sql.SQLCompileException;
+package org.geozelot.utils.sql;
 
 import java.util.*;
 
@@ -264,42 +262,6 @@ public class SQLStringBuilder {
     }
 
     /**
-     * Helper method to create a valid (double-quoted) SQL identifier and optional qualifiers;
-     * qualifiers are prepended to the identifier in order given;
-     * uses Object.toString() method
-     */
-    public static String Identifier(Object identifier, Object... qualifiers) {
-        StringJoiner qualifiedIdentifier = new StringJoiner(".");
-        for (Object qualifier : qualifiers) {
-            qualifiedIdentifier.add(wrapDoubleQuote(escapeChars(qualifier.toString())));
-        }
-
-        return qualifiedIdentifier.add(wrapDoubleQuote(escapeChars(identifier.toString()))).toString();
-    }
-
-    /**
-     * Helper method to create a valid (single-quoted) SQL varchar (TEXT) value from a given Object;
-     * uses Object.toString() method.
-     */
-    public static String Varchar(Object identifier) {
-        return addCast(wrapSingleQuote(escapeChars(identifier.toString())), "TEXT");
-    }
-
-    /**
-     * Wrap a given value into an explicit CAST to a given type
-     */
-    public static String Cast(Object value, String type) {
-        return addCast(value.toString(), type);
-    }
-
-    /**
-     * Create a SQL block wrapped in parentheses
-     */
-    public static String Block(Object block) {
-        return wrapParens(block.toString());
-    }
-
-    /**
      * Initiate a new SQL block literal joiner and set to current block
      */
     private SQLStringBuilder blockPut(QUERY_BLOCK block, String delimiter) {
@@ -443,6 +405,46 @@ public class SQLStringBuilder {
         }
 
         this.needsCompile = false;
+    }
+
+
+
+// PUBLIC HELPER METHODS
+
+    /**
+     * Helper method to create a valid (double-quoted) SQL identifier and optional qualifiers;
+     * qualifiers are prepended to the identifier in order given;
+     * uses Object.toString() method
+     */
+    public static String Identifier(Object identifier, Object... qualifiers) {
+        StringJoiner qualifiedIdentifier = new StringJoiner(".");
+        for (Object qualifier : qualifiers) {
+            qualifiedIdentifier.add(wrapDoubleQuote(escapeChars(qualifier.toString())));
+        }
+
+        return qualifiedIdentifier.add(wrapDoubleQuote(escapeChars(identifier.toString()))).toString();
+    }
+
+    /**
+     * Helper method to create a valid (single-quoted) SQL varchar (TEXT) value from a given Object;
+     * uses Object.toString() method.
+     */
+    public static String Varchar(Object identifier) {
+        return addCast(wrapSingleQuote(escapeChars(identifier.toString())), "TEXT");
+    }
+
+    /**
+     * Wrap a given value into an explicit CAST to a given type
+     */
+    public static String Cast(Object value, String type) {
+        return addCast(value.toString(), type);
+    }
+
+    /**
+     * Create a SQL block wrapped in parentheses
+     */
+    public static String Block(Object block) {
+        return wrapParens(block.toString());
     }
 
 
