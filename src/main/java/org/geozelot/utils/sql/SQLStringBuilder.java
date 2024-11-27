@@ -809,7 +809,7 @@ public class SQLStringBuilder {
      * Add a procedure call with parameterized (ordinal) argument count to the query string
      */
     public SQLStringBuilder VoidProcedure(String procedure, int arguments) {
-        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", procedure);
+        StringJoiner argumentList = parensWrappedArgumentJoiner(" , ", procedure);
         for (int i = 0; i < arguments; i++) {
             String parameterReference = this.registerParameter();
             argumentList.add(parameterReference);
@@ -822,7 +822,7 @@ public class SQLStringBuilder {
      * Add a scalar function with parameterized (named) arguments and alias to the query string
      */
     public SQLStringBuilder ScalarFunction(String function, String alias, Object... arguments) {
-        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", function);
+        StringJoiner argumentList = parensWrappedArgumentJoiner(" , ", function);
         for (Object argument : arguments) {
             String parameterReference = this.registerParameter(argument);
             argumentList.add(parameterReference);
@@ -835,7 +835,7 @@ public class SQLStringBuilder {
      * Add a scalar function with parameterized (ordinal) argument count and alias to the query string
      */
     public SQLStringBuilder ScalarFunction(String function, String alias, int arguments) {
-        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", function);
+        StringJoiner argumentList = parensWrappedArgumentJoiner(" , ", function);
         for (int i = 0; i < arguments; i++) {
             String parameterReference = this.registerParameter();
             argumentList.add(parameterReference);
@@ -848,7 +848,7 @@ public class SQLStringBuilder {
      * Add a scalar function with parameterized (named) arguments and alias to the query string and wrapped in a CAST
      */
     public SQLStringBuilder ScalarFunctionCast(String function, String alias, String type, String... arguments) {
-        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", function);
+        StringJoiner argumentList = parensWrappedArgumentJoiner(" , ", function);
         for (Object argument : arguments) {
             String parameterReference = this.registerParameter(argument);
             argumentList.add(parameterReference);
@@ -861,7 +861,7 @@ public class SQLStringBuilder {
      * Add a scalar function with parameterized (ordinal) argument count and alias to the query string and wrapped in a CAST
      */
     public SQLStringBuilder ScalarFunctionCast(String function, String alias, String type, int arguments) {
-        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", function);
+        StringJoiner argumentList = parensWrappedArgumentJoiner(" , ", function);
         for (int i = 0; i < arguments; i++) {
             String parameterReference = this.registerParameter();
             argumentList.add(parameterReference);
