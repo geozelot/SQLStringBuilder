@@ -238,6 +238,19 @@ public class SQLStringBuilder {
         return String.format("CAST( %s AS %s )", value, type);
     }
 
+    /**
+     * Create a custom delimited argument list wrapped in parentheses with optional caller prefix, as StringJoiner
+     */
+    private static StringJoiner parensWrappedArgumentJoiner(String delimiter, Object caller) {
+        String prefix = caller == null ? "( " : String.format("%s ( ", caller);
+        String suffix = " )";
+
+        return new StringJoiner(delimiter, prefix, suffix);
+    }
+
+    private static StringJoiner parensWrappedArgumentJoiner(String delimiter) {
+        return SQLStringBuilder.parensWrappedArgumentJoiner(delimiter, null);
+    }
 
     /**
      * Identify if a string part is a parameter wildcard
