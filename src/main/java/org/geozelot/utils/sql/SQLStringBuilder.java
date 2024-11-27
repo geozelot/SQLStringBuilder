@@ -326,6 +326,37 @@ public class SQLStringBuilder {
         return this.blockAdd(literals);
     }
 
+
+    /**
+     * Register a parameter in the parameter injection system
+     */
+    private String registerParameter(Object reference) {
+        if (this.parameterInjections == null) {
+            this.parameterInjections = new ArrayList<>();
+            this.parameterReferences = new HashMap<>();
+        }
+
+        this.parameterCount++;
+        this.parameterInjections.add(null);
+
+        String parameterReference = reference == null ? wrapOrdinalParameter(this.currentParameterOrdinal) : wrapNamedParameter(reference);
+        if (!this.parameterReferences.containsKey(parameterReference)) {
+            this.parameterReferences.put(parameterReference, new ArrayList<>());
+        }
+
+        this.parameterReferences.get(parameterReference)
+                .add(this.parameterCount-1);
+
+        this.needsCompile = true;
+
+        return parameterReference;
+    }
+
+    private String registerParameter() {
+        return this.registerParameter(null);
+    }
+
+
     /**
      * Parse a given SQLStringBuilder instance into this instance as subquery;
      * Migrates all existing parameters into this instance and raps the resulting literal in parentheses
