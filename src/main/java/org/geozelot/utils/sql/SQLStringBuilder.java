@@ -923,8 +923,9 @@ public class SQLStringBuilder {
             throw new SQLCompileException("No parameter found with reference: " + reference);
         }
 
+        String valueReference = value instanceof String ? wrapSingleQuote(escapeChars(value.toString())) : value.toString();
         for (Integer position : this.parameterReferences.get(parameterReference)) {
-            this.parameterInjections.set(position, value.toString());
+            this.parameterInjections.set(position, valueReference);
         }
 
         this.needsCompile = true;
@@ -939,7 +940,8 @@ public class SQLStringBuilder {
         this.clearQueryParams();
 
         for (int i = 0; i < values.length && i <= this.parameterCount; i++) {
-            this.parameterInjections.set(i, values[i].toString());
+            String valueReference = values[i] instanceof String ? wrapSingleQuote(escapeChars(values[i].toString())) : values[i].toString();
+            this.parameterInjections.set(i, valueReference);
         }
 
         return this;
