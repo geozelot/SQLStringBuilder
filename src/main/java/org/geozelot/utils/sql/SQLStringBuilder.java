@@ -557,10 +557,9 @@ public class SQLStringBuilder {
     }
 
     public SQLStringBuilder USING(String... columns) {
-        this.blockAdd(QUERY_BLOCK.FROM, QUERY_STATEMENT.USING.toString(), "(");
-        for (int i = 0; i < columns.length; i++) {
-            this.blockAdd(QUERY_BLOCK.FROM, columns[i]);
-            if (i <  columns.length - 1) this.blockAdd(",");
+        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", QUERY_STATEMENT.USING);
+        for (String column : columns) {
+            argumentList.add(column);
         }
 
         return this.blockAdd(QUERY_BLOCK.FROM, ")");
@@ -598,23 +597,24 @@ public class SQLStringBuilder {
         return this.blockAdd(QUERY_STATEMENT.IN).SubQuery(subQuery, "");
     }
 
-    public SQLStringBuilder IN(Integer parameterCount) {
-        this.blockAdd(QUERY_STATEMENT.IN.toString(), "(");
-        for (int i = 0; i < parameterCount; i++) {
-            this.QueryParam();
-            if (i < parameterCount - 1) this.blockAdd(",");
+    public SQLStringBuilder IN(Integer arguments) {
+        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", QUERY_STATEMENT.IN);
+        for (int i = 0; i < arguments; i++) {
+            String parameterReference = this.registerParameter();
+            argumentList.add(parameterReference);
         }
 
-        return this.blockAdd(")");
+        return this.blockAdd(argumentList.toString());
     }
 
-    public SQLStringBuilder IN(Object... parameterNames) {
-        this.blockAdd(QUERY_STATEMENT.IN.toString(), "(");
-        for (int i = 0; i < parameterNames.length; i++) {
-            this.QueryParam(parameterNames[i]);
-            if (i < parameterNames.length - 1) this.blockAdd(",");
+    public SQLStringBuilder IN(Object... arguments) {
+        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", QUERY_STATEMENT.IN);
+        for (Object argument : arguments) {
+            String parameterReference = this.registerParameter(argument);
+            argumentList.add(parameterReference);
         }
-        return this.blockAdd(")");
+
+        return this.blockAdd(argumentList.toString());
     }
 
     public SQLStringBuilder LIKE() {
@@ -793,60 +793,99 @@ public class SQLStringBuilder {
 // MAIN API: FUNCTION CALL INJECTION
 
     /**
-     * Add a procedure call with arguments to the query string
+     * Add a procedure call with parameterized (named) arguments to the query string
      */
     public SQLStringBuilder VoidProcedure(String procedure, Object... arguments) {
-        StringJoiner procedureCall = new StringJoiner("").add(procedure);
-
-        StringJoiner argumentList = new StringJoiner(" , ", "( ", " )");
+        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", procedure);
         for (Object argument : arguments) {
-            argumentList.add(argument.toString());
+            String parameterReference = this.registerParameter(argument);
+            argumentList.add(parameterReference);
         }
 
-        return this.blockAdd(procedureCall.add(argumentList.toString()).toString());
+        return this.blockAdd(argumentList.toString());
     }
 
     /**
-     * Add a scalar function with arguments and alias to the query string
+     * Add a procedure call with parameterized (ordinal) argument count to the query string
+     */
+    public SQLStringBuilder VoidProcedure(String procedure, int arguments) {
+        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", procedure);
+        for (int i = 0; i < arguments; i++) {
+            String parameterReference = this.registerParameter();
+            argumentList.add(parameterReference);
+        }
+
+        return this.blockAdd(argumentList.toString());
+    }
+
+    /**
+     * Add a scalar function with parameterized (named) arguments and alias to the query string
      */
     public SQLStringBuilder ScalarFunction(String function, String alias, Object... arguments) {
-        StringJoiner functionCall = new StringJoiner("").add(function);
-
-        StringJoiner argumentList = new StringJoiner(" , ", "( ", " )");
+        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", function);
         for (Object argument : arguments) {
-            argumentList.add(argument.toString());
+            String parameterReference = this.registerParameter(argument);
+            argumentList.add(parameterReference);
         }
 
-        return this.blockAdd(addAliasSuffix(functionCall.add(argumentList.toString()).toString(), alias));
+        return this.blockAdd(addAliasSuffix(argumentList.toString(), alias));
     }
 
     /**
-     * Add a scalar function with arguments and alias to the query string and wrapped in a CAST
+     * Add a scalar function with parameterized (ordinal) argument count and alias to the query string
+     */
+    public SQLStringBuilder ScalarFunction(String function, String alias, int arguments) {
+        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", function);
+        for (int i = 0; i < arguments; i++) {
+            String parameterReference = this.registerParameter();
+            argumentList.add(parameterReference);
+        }
+
+        return this.blockAdd(addAliasSuffix(argumentList.toString(), alias));
+    }
+
+    /**
+     * Add a scalar function with parameterized (named) arguments and alias to the query string and wrapped in a CAST
      */
     public SQLStringBuilder ScalarFunctionCast(String function, String alias, String type, String... arguments) {
-        StringJoiner functionCall = new StringJoiner("").add(function);
-
-        StringJoiner argumentList = new StringJoiner(" , ", "( ", " )");
-        for (String argument : arguments) {
-            argumentList.add(argument);
+        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", function);
+        for (Object argument : arguments) {
+            String parameterReference = this.registerParameter(argument);
+            argumentList.add(parameterReference);
         }
 
-        return this.blockAdd(addAliasSuffix(addCast(functionCall.add(argumentList.toString()).toString(), type), alias));
+        return this.blockAdd(addAliasSuffix(addCast(argumentList.toString(), type), alias));
     }
 
     /**
-     * Add an aggregate function with argument, optional DISTINCT and alias to the query string
+     * Add a scalar function with parameterized (ordinal) argument count and alias to the query string and wrapped in a CAST
+     */
+    public SQLStringBuilder ScalarFunctionCast(String function, String alias, String type, int arguments) {
+        StringJoiner argumentList = SQLStringBuilder.parensWrappedArgumentJoiner(" , ", function);
+        for (int i = 0; i < arguments; i++) {
+            String parameterReference = this.registerParameter();
+            argumentList.add(parameterReference);
+        }
+
+        return this.blockAdd(addAliasSuffix(addCast(argumentList.toString(), type), alias));
+    }
+
+    /**
+     * Add an aggregate function with parameterized (named) argument, optional DISTINCT and alias to the query string
      */
     public SQLStringBuilder AggFunction(String function, String alias, Boolean distinct, String argument) {
-        String functionCall = String.format("%s( %s%s )", function, distinct ? "DISTINCT " : "", argument);
+        String parameterReference = this.registerParameter(argument);
+        String functionCall = String.format("%s( %s%s )", function, distinct ? "DISTINCT " : "", parameterReference);
         return this.blockAdd(addAliasSuffix(functionCall, alias));
     }
 
+
     /**
-     * Add an aggregate function with argument, optional DISTINCT and alias to the query string and wrap in a CAST
+     * Add an aggregate function with parameterized (named) argument, optional DISTINCT and alias to the query string and wrap in a CAST
      */
     public SQLStringBuilder AggFunctionCast(String function, String alias, String type, Boolean distinct, String argument) {
-        String functionCall = String.format("%s( %s%s )", function, distinct ? "DISTINCT " : "", argument);
+        String parameterReference = this.registerParameter(argument);
+        String functionCall = String.format("%s( %s%s )", function, distinct ? "DISTINCT " : "", parameterReference);
         return this.blockAdd(addAliasSuffix(addCast(functionCall, type), alias));
     }
 
@@ -864,29 +903,14 @@ public class SQLStringBuilder {
     }
 
     /**
-     * Add a named/specific ordinal parameter wildcard - specifically place a parameter wildcard addressable by given reference in setQueryParam
+     * Add a named/specific parameter wildcard - specifically place a parameter wildcard addressable by given reference in setQueryParam
      */
     public SQLStringBuilder QueryParam(Object reference) {
-        if (this.parameterInjections == null) {
-            this.parameterInjections = new ArrayList<>();
-            this.parameterReferences = new HashMap<>();
-        }
-
-        this.parameterCount++;
-        this.parameterInjections.add(null);
-
-        String parameterReference = reference == null ? wrapOrdinalParameter(this.currentParameterOrdinal) : wrapNamedParameter(reference);
-        if (!this.parameterReferences.containsKey(parameterReference)) {
-            this.parameterReferences.put(parameterReference, new ArrayList<>());
-        }
-
-        this.parameterReferences.get(parameterReference)
-                .add(this.parameterCount-1);
+        String parameterReference = this.registerParameter(reference);
 
         this.queryBlocks.get(this.currentBlock)
                 .add(parameterReference);
 
-        this.needsCompile = true;
         return this;
     }
 
